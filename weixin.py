@@ -100,7 +100,7 @@ class WebWeixin(object):
         self.GroupMemeberList = []  # 群友
         self.PublicUsersList = []  # 公众号／服务号
         self.SpecialUsersList = []  # 特殊账号
-        self.autoReplyMode = False
+        self.autoReplyMode = True
         self.syncHost = ''
         self.user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.109 Safari/537.36'
         self.interactive = False
@@ -743,11 +743,16 @@ class WebWeixin(object):
             content = msg['Content'].replace('&lt;', '<').replace('&gt;', '>')
             msgid = msg['MsgId']
 
-            if msgType == 1:
+            for member in self.GroupList:
+                if member['NickName'] == name:
+                    name = '未知'
+                    break
+
+            if msgType == 1 and name != '未知':
                 raw_msg = {'raw_msg': msg}
                 self._showMsg(raw_msg)
                 if self.autoReplyMode:
-                    ans = self._xiaodoubi(content) + '\n[微信机器人自动回复]'
+                    ans = self._simsimi(content) + '\n🔞🈲👉自动回复👈🏧💹'
                     if self.webwxsendmsg(ans, msg['FromUserName']):
                         print '自动回复: ' + ans
                         logging.info('自动回复: ' + ans)
@@ -949,8 +954,7 @@ class WebWeixin(object):
             print self
         logging.debug(self)
 
-        if self.interactive and raw_input('[*] 是否开启自动回复模式(y/n): ') == 'y':
-            self.autoReplyMode = True
+        if self.autoReplyMode == True:
             print '[*] 自动回复模式 ... 开启'
             logging.debug('[*] 自动回复模式 ... 开启')
         else:
@@ -1095,7 +1099,7 @@ class WebWeixin(object):
         return ''
 
     def _xiaodoubi(self, word):
-        url = 'http://www.xiaodoubi.com/bot/chat.php'
+        url = ''
         try:
             r = requests.post(url, data={'chat': word})
             return r.content
@@ -1103,15 +1107,23 @@ class WebWeixin(object):
             return "让我一个人静静 T_T..."
 
     def _simsimi(self, word):
-        key = ''
-        url = 'http://sandbox.api.simsimi.com/request.p?key=%s&lc=ch&ft=0.0&text=%s' % (
-            key, word)
-        r = requests.get(url)
-        ans = r.json()
-        if ans['result'] == '100':
-            return ans['response']
+        url = 'http://www.tuling123.com/openapi/api'
+        da = {"key": "6eb60f29966443978f2d6f8b47f68944", "info": word}
+        data = json.dumps(da)
+        r = requests.post(url, data=data)
+        j = eval(r.text)
+        code = j['code']
+        if code == 100000:
+            recontent = j['text']
+        elif code == 200000:
+            recontent = j['text']+j['url']
+        elif code == 302000:
+            recontent = j['text']+j['list'][0]['info']+j['list'][0]['detailurl']
+        elif code == 308000:
+            recontent = j['text']+j['list'][0]['info']+j['list'][0]['detailurl']
         else:
-            return '你在说什么，风太大听不清列'
+            recontent = '现在正忙，稍后回复。'
+        return recontent
 
     def _searchContent(self, key, content, fmat='attr'):
         if fmat == 'attr':
